@@ -139,4 +139,4 @@ app.listen(PORT, async () => {
   await initDb();
 });
 
-alert("Tienda kla pulenta");
+console.log("CACA CON CHOCLO")

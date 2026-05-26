@@ -16,3 +16,4 @@ INSERT INTO productos (nombre, descripcion, precio, stock) VALUES
 ('Alimento Adulto Pedigree', 'Sabor carne', 15990, 40),
 ('Bravery pollo Adulto raza pequena', 'Sabor a pollo', 25990, 20);
 ('Churu', 'Sabor pasta base', 1000, 50);
+('CACA CON CHOCLO', 'CHOCLO MAL DIGERIDO', 1000, 50);
