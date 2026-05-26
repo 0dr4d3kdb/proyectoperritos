@@ -2,7 +2,7 @@ name: CI/CD Tienda Perritos - Frontend
 
 on:
   push:
-    branches: [ "main","master" ]
+    branches: [ "main", "master" ]
     paths:
       - "frontend/**"
 
@@ -25,11 +25,19 @@ jobs:
     - name: Login en Amazon ECR (runner)
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build imagen Frontend y push a ECR
+    - name: Build imagen Frontend
       run: |
         cd frontend
         docker build --no-cache -t tienda-frontend .
+
+    - name: Tag imagen con SHA
+      run: |
+        docker tag tienda-frontend:latest ${{ secrets.ECR_REPO_URL_FRONTEND }}:${{ github.sha }}
         docker tag tienda-frontend:latest ${{ secrets.ECR_REPO_URL_FRONTEND }}:latest
+
+    - name: Push imagen a ECR
+      run: |
+        docker push ${{ secrets.ECR_REPO_URL_FRONTEND }}:${{ github.sha }}
         docker push ${{ secrets.ECR_REPO_URL_FRONTEND }}:latest
 
     - name: Desplegar Frontend vía SSM
@@ -38,12 +46,16 @@ jobs:
           --instance-ids ${{ secrets.EC2_FRONTEND_INSTANCE_ID }} \
           --document-name "AWS-RunShellScript" \
           --comment "Actualizar tienda-frontend desde ECR" \
-          --parameters '{"commands":[
-            "set -e",
-            "aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
-            "docker pull ${{ secrets.ECR_REPO_URL_FRONTEND }}:latest",
-            "docker stop tienda-frontend || true",
-            "docker rm tienda-frontend || true",
-            "docker run -d --name tienda-frontend -p 80:80 ${{ secrets.ECR_REPO_URL_FRONTEND }}:latest"
-          ]}' \
+          --parameters '{
+            "commands":[
+              "set -e",
+              "aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}",
+              "docker stop tienda-frontend || true",
+              "docker rm tienda-frontend || true",
+              "docker rmi ${{ secrets.ECR_REPO_URL_FRONTEND }}:latest || true",
+              "docker pull ${{ secrets.ECR_REPO_URL_FRONTEND }}:${{ github.sha }}",
+              "docker tag ${{ secrets.ECR_REPO_URL_FRONTEND }}:${{ github.sha }} tienda-frontend:latest",
+              "docker run -d --name tienda-frontend -p 80:80 ${{ secrets.ECR_REPO_URL_FRONTEND }}:${{ github.sha }}"
+            ]
+          }' \
           --output text
